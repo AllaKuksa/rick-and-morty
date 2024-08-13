@@ -1,6 +1,7 @@
 import random
 
 from django.db.models import QuerySet
+from drf_spectacular.utils import extend_schema, OpenApiParameter
 from rest_framework import status, generics
 from rest_framework.decorators import api_view
 from rest_framework.request import Request
@@ -10,8 +11,14 @@ from characters.models import Characters
 from characters.serializers import CharacterSerializer
 
 
+@extend_schema(
+    responses={
+        status.HTTP_200_OK: CharacterSerializer
+    }
+)
 @api_view(["GET"])
 def get_random_characters_view(request: Request) -> Response:
+    """Get random character"""
     pks = Characters.objects.values_list("pk", flat=True)
     random_pk = random.choice(pks)
     random_character = Characters.objects.get(pk=random_pk)
@@ -28,3 +35,17 @@ class CharacterListView(generics.ListAPIView):
         if name is not None:
             queryset = queryset.filter(name__icontains=name)
         return queryset
+
+    @extend_schema(
+        parameters=[
+            OpenApiParameter(
+                name="name",
+                description="Filter characters by name",
+                required=False,
+                type=str,
+            ),
+        ]
+    )
+    def get(self, request, *args, **kwargs) -> Response:
+        """List characters with filer by name"""
+        return super().get(request, *args, **kwargs)
